@@ -174,8 +174,19 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 
 		file_env 'MYSQL_DATABASE'
 		if [ "$MYSQL_DATABASE" ]; then
-			echo "CREATE DATABASE IF NOT EXISTS \`$MYSQL_DATABASE\` ;" | "${mysql[@]}"
-			mysql+=( "$MYSQL_DATABASE" )
+
+                        # strip out whitespace if it exists
+                        MYSQL_DATABASE=$(echo -e ${MYSQL_DATABASE} | sed -e 's/\s*//g')
+
+                        #Convert string to array
+                        IFS=',' read -ra DATABASES <<< "$MYSQL_DATABASE"
+
+                        #Print all names from array
+                        for DB_NAME in "${DATABASES[@]}"; do
+                                echo "CREATE DATABASE IF NOT EXISTS \`$DB_NAME\` ;" | "${mysql[@]}"
+                                mysql+=( "$DB_NAME" )
+                        done
+
 		fi
 
 		file_env 'MYSQL_USER'
@@ -184,7 +195,15 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 			echo "CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD' ;" | "${mysql[@]}"
 
 			if [ "$MYSQL_DATABASE" ]; then
-				echo "GRANT ALL ON \`$MYSQL_DATABASE\`.* TO '$MYSQL_USER'@'%' ;" | "${mysql[@]}"
+
+                                #Convert string to array
+                                IFS=',' read -ra DATABASES <<< "$MYSQL_DATABASE"
+
+                                #Print all names from array
+                                for DB_NAME in "${DATABASES[@]}"; do
+                                        echo "GRANT ALL ON \`$DB_NAME\`.* TO '$MYSQL_USER'@'%' ;" | "${mysql[@]}"
+                                        mysql+=( "$DB_NAME" )
+                                done
 			fi
 
 			echo 'FLUSH PRIVILEGES ;' | "${mysql[@]}"
